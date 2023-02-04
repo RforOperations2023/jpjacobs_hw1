@@ -50,7 +50,11 @@ ui <- fluidPage(
         choices = jan.2023.permits$SNP_NEIGHBORHOOD %>%
           unique() %>% sort(),
         selected = c("North Oakland","Shadyside","Bloomfield")
-      )
+      ),
+      br(),  # Visual spacer
+      
+      # Write sampled data as CSV 
+      actionButton(inputId = "download", label = "Download CSV")
     ),
 
     # Output
@@ -58,7 +62,7 @@ ui <- fluidPage(
       
       # Show a stacked bar plot of the number of projects in each nbrhd
       plotOutput("stacked.bar.plot"),
-      br()  # a little bit of visual separation
+      br(),  # a little bit of visual separation
       
       # # Split two histograms across the page
       # fluidRow(
@@ -71,7 +75,7 @@ ui <- fluidPage(
       # ),
       
       # Show data table (DT) of selected data
-      #::dataTableOutput(outputId = "permit.table")
+      DT::dataTableOutput(outputId = "permit.table")
     )
   )
 )
@@ -120,6 +124,23 @@ server <- function(input, output) {
   
   # Plot residential histogram
   #output$
+  
+  # Display data table with DT
+  output$permit.table <- DT::renderDataTable({
+    DT::datatable(
+      data = nbrhd.subset()[, c(1,5,4,11,12)],
+      options = list(pageLength=10),
+      rownames=F
+    )
+  })
+  
+  # Write sampled data as CSV
+  observeEvent(eventExpr = input$download, handlerExpr = {
+    filename <- paste0(
+      "permits_", str_replace_all(Sys.time(), ":|\ ", "_"),".csv"
+    )
+    write.csv(nbrhd.subset(), file = filename, row.names = FALSE)
+  })
 }
 
 # Run the application 
