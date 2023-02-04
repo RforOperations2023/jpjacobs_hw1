@@ -61,8 +61,16 @@ ui <- fluidPage(
     mainPanel(
       
       # Show a stacked bar plot of the number of projects in each nbrhd
-      plotOutput("stacked.bar.plot"),
+      plotOutput("bar.plot"),
       br(),  # a little bit of visual separation
+      
+      # Show a histogram for the permit value of residential projects
+      plotOutput("res.hist"),
+      br(),  # Visual spacer
+      
+      # Show a histogram for the permit value of commercial projects
+      plotOutput("com.hist"),
+      br(),  # Visual spacer
       
       # # Split two histograms across the page
       # fluidRow(
@@ -93,6 +101,28 @@ server <- function(input, output) {
     )
   })
   
+  # Create a residential subset filtered by selected data
+  res.subset <- reactive({
+    req(input$nbrhd)
+    filter(jan.2023.permits,
+      SNP_NEIGHBORHOOD %in% input$nbrhd &
+      TOTALPROJECTVALUE >= input$cost[1] &
+      TOTALPROJECTVALUE <= input$cost[2] &
+        word(TYPEOFSTRUCTURE, 1) == "Residential"
+    )
+  })
+  
+  # Create a commercial subset filtered by selected data
+  com.subset <- reactive({
+    req(input$nbrhd)
+    filter(jan.2023.permits,
+      SNP_NEIGHBORHOOD %in% input$nbrhd &
+      TOTALPROJECTVALUE >= input$cost[1] &
+      TOTALPROJECTVALUE <= input$cost[2] &
+      word(TYPEOFSTRUCTURE, 1) == "Commercial"
+    )
+  })
+  
   # Create a permit count by neighborhood of reactive
   nbrhd.counts <- reactive({
     req(input$nbrhd)
@@ -106,7 +136,7 @@ server <- function(input, output) {
   })
   
   # Plot the bar plot
-  output$stacked.bar.plot <- renderPlot({
+  output$bar.plot <- renderPlot({
     ggplot(
       nbrhd.counts(),
       aes(
@@ -122,8 +152,33 @@ server <- function(input, output) {
       theme_minimal()
   })
   
-  # Plot residential histogram
-  #output$
+  # Plot the residential histogram
+  output$res.hist <- renderPlot({
+    ggplot(
+      res.subset(),
+      aes(TOTALPROJECTVALUE)
+    ) +
+      geom_histogram(bins=11) +
+      labs(
+        x="Permit Value ($)", y="Permits",
+        title="Residential Permits by Value (Under $1M)"
+      ) +
+      theme_minimal()
+  })
+  
+  # Plot the commercial histogram
+  output$com.hist <- renderPlot({
+    ggplot(
+      com.subset(),
+      aes(TOTALPROJECTVALUE)
+    ) +
+      geom_histogram(bins=11) +
+      labs(
+        x="Permit Value ($)", y="Permits",
+        title="Commercial Permits by Value (Under $1M)"
+      ) +
+      theme_minimal()
+  })
   
   # Display data table with DT
   output$permit.table <- DT::renderDataTable({
